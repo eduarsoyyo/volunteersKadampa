@@ -28,6 +28,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ${{ github.workspace }}/dist
+          publish_dir: ./dist
           publish_branch: gh-pages
-          cname: volunteerskadampa.com # Optional: if you have a custom domain
+          # Elimina o comenta la siguiente línea:
+          # cname: volunteerskadampa.com # Optional: if you have a custom domain
