@@ -389,27 +389,20 @@ function App() {
               <div className="min-w-max">
                 <table className="w-full border-collapse">
                   {/* Encabezado con fechas */}
-                  <thead>
-                    <tr>
-                      <th className="sticky left-0 bg-gray-50 border border-gray-200 p-3 text-left font-semibold text-gray-700 w-48 z-20">
-                        Voluntario
-                      </th>
-                      {rangoFechas.map((fecha, index) => (
-                        <Tooltip
-                          key={index}
-                          content={formatearFechaCompleta(fecha)}
-                          position="bottom"
-                        >
-                          <th className="border border-gray-200 p-2 text-center font-semibold text-gray-700 w-16 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
-                            <div className="text-xs whitespace-nowrap">
-                              {formatearFecha(fecha)}
-                            </div>
-                          </th>
-                        </Tooltip>
-                      ))}
-                    </tr>
-                  </thead>
-                  
+                    <thead>
+                      <tr>
+                        <th className="sticky left-0 bg-gray-50 border border-gray-200 p-2 text-left font-semibold text-gray-700 w-48 z-20">
+                          Voluntario
+                        </th>
+                        {rangoFechas.map((fecha, index) => (
+                          <Tooltip key={index} content={formatearFechaCompleta(fecha)} position="bottom">
+                            <th className="border border-gray-200 px-2 py-1 text-center font-semibold text-gray-700 w-12 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
+                              <span className="text-xs inline-block">{formatearFecha(fecha)}</span>
+                            </th>
+                          </Tooltip>
+                        ))}
+                      </tr>
+                    </thead>                  
                   {/* Filas de voluntarios */}
                   <tbody>
                     {voluntariosFiltrados.map((voluntario, voluntarioIndex) => (
@@ -479,29 +472,26 @@ function App() {
                     ))}
                     
                     {/* Fila de totales */}
-                    <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-200">
-                      <td className="sticky left-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 p-3 font-bold text-blue-900 z-10">
-                        Total por día
-                      </td>
-                      {rangoFechas.map((fecha, fechaIndex) => {
-                        const total = calcularTotalPorDia(fecha)
-                        return (
-                          <Tooltip
-                            key={fechaIndex}
-                            content={`${total} voluntarios disponibles el ${formatearFechaCompleta(fecha)}`}
-                            position="top"
-                          >
-                            <td className="border border-gray-200 p-2 text-center font-bold text-blue-900 hover:bg-blue-100 transition-colors cursor-help w-16">
-                              <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 text-xs ${
-                                total > 0 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                              }`}>
-                                {total}
-                              </div>
-                            </td>
-                          </Tooltip>
-                        )
-                      })}
-                    </tr>
+                      <tr className="border-t-4 border-blue-300 bg-gradient-to-r from-blue-50 to-indigo-50">
+                        <td className="sticky left-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 p-3 font-bold text-blue-900 z-10">
+                          Total por día
+                        </td>
+                        {rangoFechas.map((fecha, fechaIndex) => {
+                          const total = calcularTotalPorDia(fecha)
+                          return (
+                            <Tooltip key={fechaIndex} content={`${total} voluntarios disponibles el ${formatearFechaCompleta(fecha)}`} position="top">
+                              <td className="border border-gray-200 p-1 text-center hover:bg-blue-100 transition-colors cursor-help w-12">
+                                <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all duration-200 ${
+                                  total > 0 ? 'bg-blue-600 text-white hover:scale-110 shadow-md' : 'bg-gray-200 text-gray-500'
+                                }`}>
+                                  {total}
+                                </div>
+                              </td>
+                            </Tooltip>
+                          )
+                        })}
+                      </tr>
+
                   </tbody>
                 </table>
               </div>
