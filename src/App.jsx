@@ -1,14 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
-import { Calendar, Users, MapPin, Clock, Info } from 'lucide-react'
+import { Calendar, Users, MapPin, Clock, Info, Upload, FileSpreadsheet, Download } from 'lucide-react'
 import Tooltip from './components/Tooltip.jsx'
 import './App.css'
 
 // Datos de ejemplo de voluntarios
-const voluntariosData = [
+const voluntariosDataEjemplo = [
   { nombre: "Juan", apellido: "Pérez", centro: "Sevilla", llegada: "2025-08-01", salida: "2025-08-05" },
   { nombre: "Ana", apellido: "López", centro: "Madrid", llegada: "2025-08-03", salida: "2025-08-07" },
   { nombre: "Carlos", apellido: "García", centro: "Barcelona", llegada: "2025-08-02", salida: "2025-08-06" },
@@ -20,11 +20,149 @@ const voluntariosData = [
 ]
 
 function App() {
+  const [voluntariosData, setVoluntariosData] = useState(voluntariosDataEjemplo)
   const [centroSeleccionado, setCentroSeleccionado] = useState('todos')
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const fileInputRef = useRef(null)
+
+  // Función para procesar archivo Excel
+  const procesarArchivoExcel = async (file) => {
+    setIsLoading(true)
+    try {
+      // Importar la librería xlsx dinámicamente
+      const XLSX = await import('xlsx')
+      
+      const data = await file.arrayBuffer()
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
+      const jsonData = XLSX.utils.sheet_to_json(worksheet)
+      
+      // Mapear los datos del Excel al formato esperado
+      const voluntariosNuevos = jsonData.map((row, index) => {
+        // Intentar diferentes nombres de columnas comunes
+        const nombre = row.nombre || row.Nombre || row.NOMBRE || row.name || row.Name || ''
+        const apellido = row.apellido || row.Apellido || row.APELLIDO || row.apellidos || row.Apellidos || row.surname || row.Surname || ''
+        const centro = row.centro || row.Centro || row.CENTRO || row.city || row.City || row.ciudad || row.Ciudad || ''
+        
+        // Para fechas, intentar diferentes formatos
+        let llegada = row.llegada || row.Llegada || row.LLEGADA || row.arrival || row.Arrival || row.inicio || row.Inicio || ''
+        let salida = row.salida || row.Salida || row.SALIDA || row.departure || row.Departure || row.fin || row.Fin || ''
+        
+        // Convertir fechas si es necesario
+        if (llegada instanceof Date) {
+          llegada = llegada.toISOString().split('T')[0]
+        } else if (typeof llegada === 'number') {
+          // Excel almacena fechas como números
+          const date = new Date((llegada - 25569) * 86400 * 1000)
+          llegada = date.toISOString().split('T')[0]
+        }
+        
+        if (salida instanceof Date) {
+          salida = salida.toISOString().split('T')[0]
+        } else if (typeof salida === 'number') {
+          const date = new Date((salida - 25569) * 86400 * 1000)
+          salida = date.toISOString().split('T')[0]
+        }
+        
+        return {
+          nombre: String(nombre).trim(),
+          apellido: String(apellido).trim(),
+          centro: String(centro).trim(),
+          llegada: String(llegada),
+          salida: String(salida)
+        }
+      }).filter(voluntario => 
+        voluntario.nombre && 
+        voluntario.apellido && 
+        voluntario.centro && 
+        voluntario.llegada && 
+        voluntario.salida
+      )
+      
+      if (voluntariosNuevos.length === 0) {
+        alert('No se encontraron datos válidos en el archivo. Asegúrate de que las columnas se llamen: nombre, apellido, centro, llegada, salida')
+        return
+      }
+      
+      setVoluntariosData(voluntariosNuevos)
+      setCentroSeleccionado('todos')
+      alert(`Se cargaron ${voluntariosNuevos.length} voluntarios correctamente`)
+      
+    } catch (error) {
+      console.error('Error al procesar el archivo:', error)
+      alert('Error al procesar el archivo. Asegúrate de que sea un archivo Excel válido (.xlsx, .xls)')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Manejar selección de archivo
+  const manejarSeleccionArchivo = (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel', // .xls
+        'text/csv' // .csv
+      ]
+      
+      if (validTypes.includes(file.type) || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
+        procesarArchivoExcel(file)
+      } else {
+        alert('Por favor, selecciona un archivo Excel (.xlsx, .xls) o CSV (.csv)')
+      }
+    }
+  }
+
+  // Función para descargar plantilla Excel
+  const descargarPlantilla = async () => {
+    try {
+      const XLSX = await import('xlsx')
+      
+      const plantillaData = [
+        {
+          nombre: 'Juan',
+          apellido: 'Pérez',
+          centro: 'Madrid',
+          llegada: '2025-08-01',
+          salida: '2025-08-05'
+        },
+        {
+          nombre: 'Ana',
+          apellido: 'López',
+          centro: 'Barcelona',
+          llegada: '2025-08-02',
+          salida: '2025-08-06'
+        }
+      ]
+      
+      const worksheet = XLSX.utils.json_to_sheet(plantillaData)
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Voluntarios')
+      
+      // Ajustar ancho de columnas
+      const colWidths = [
+        { wch: 15 }, // nombre
+        { wch: 15 }, // apellido
+        { wch: 15 }, // centro
+        { wch: 12 }, // llegada
+        { wch: 12 }  // salida
+      ]
+      worksheet['!cols'] = colWidths
+      
+      XLSX.writeFile(workbook, 'plantilla_voluntarios.xlsx')
+    } catch (error) {
+      console.error('Error al generar la plantilla:', error)
+      alert('Error al generar la plantilla')
+    }
+  }
 
   // Generar rango de fechas automáticamente
   const rangoFechas = useMemo(() => {
+    if (voluntariosData.length === 0) return []
+    
     const fechas = voluntariosData.flatMap(v => [new Date(v.llegada), new Date(v.salida)])
     const fechaMin = new Date(Math.min(...fechas))
     const fechaMax = new Date(Math.max(...fechas))
@@ -38,20 +176,20 @@ function App() {
     }
     
     return rango
-  }, [])
+  }, [voluntariosData])
 
   // Filtrar voluntarios por centro
   const voluntariosFiltrados = useMemo(() => {
     return centroSeleccionado === 'todos' 
       ? voluntariosData 
       : voluntariosData.filter(v => v.centro === centroSeleccionado)
-  }, [centroSeleccionado])
+  }, [centroSeleccionado, voluntariosData])
 
   // Obtener centros únicos
   const centros = useMemo(() => {
     const centrosUnicos = [...new Set(voluntariosData.map(v => v.centro))]
     return centrosUnicos.sort()
-  }, [])
+  }, [voluntariosData])
 
   // Verificar si un voluntario está disponible en una fecha
   const estaDisponible = (voluntario, fecha) => {
@@ -92,9 +230,13 @@ function App() {
 
   // Estadísticas generales
   const estadisticas = useMemo(() => {
+    if (voluntariosFiltrados.length === 0) {
+      return { totalVoluntarios: 0, duracionPromedio: 0, maxVoluntariosPorDia: 0 }
+    }
+    
     const totalVoluntarios = voluntariosFiltrados.length
     const duracionPromedio = voluntariosFiltrados.reduce((acc, v) => acc + calcularDuracion(v), 0) / totalVoluntarios
-    const maxVoluntariosPorDia = Math.max(...rangoFechas.map(fecha => calcularTotalPorDia(fecha)))
+    const maxVoluntariosPorDia = rangoFechas.length > 0 ? Math.max(...rangoFechas.map(fecha => calcularTotalPorDia(fecha))) : 0
     
     return {
       totalVoluntarios,
@@ -118,6 +260,50 @@ function App() {
               </h1>
               <p className="text-lg text-blue-600 font-medium">Festival Kadampa</p>
             </div>
+          </div>
+          
+          {/* Controles de carga de datos */}
+          <div className="mb-6">
+            <Card className="bg-white/70 backdrop-blur-sm border-orange-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <FileSpreadsheet className="h-5 w-5 text-orange-600" />
+                  Gestión de Datos
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Procesando...' : 'Subir Excel/CSV'}
+                  </Button>
+                  
+                  <Button
+                    onClick={descargarPlantilla}
+                    variant="outline"
+                    className="border-orange-600 text-orange-600 hover:bg-orange-50"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Descargar Plantilla
+                  </Button>
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={manejarSeleccionArchivo}
+                    className="hidden"
+                  />
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Sube un archivo Excel o CSV con las columnas: nombre, apellido, centro, llegada, salida
+                </p>
+              </CardContent>
+            </Card>
           </div>
           
           {/* Estadísticas */}
@@ -200,123 +386,125 @@ function App() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                {/* Encabezado con fechas */}
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 bg-gray-50 border border-gray-200 p-3 text-left font-semibold text-gray-700 min-w-[200px] z-10">
-                      Voluntario
-                    </th>
-                    {rangoFechas.map((fecha, index) => (
-                      <Tooltip
-                        key={index}
-                        content={formatearFechaCompleta(fecha)}
-                        position="bottom"
-                      >
-                        <th className="border border-gray-200 p-2 text-center font-semibold text-gray-700 min-w-[60px] bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
-                          <div className="text-xs">
-                            {formatearFecha(fecha)}
-                          </div>
-                        </th>
-                      </Tooltip>
-                    ))}
-                  </tr>
-                </thead>
-                
-                {/* Filas de voluntarios */}
-                <tbody>
-                  {voluntariosFiltrados.map((voluntario, voluntarioIndex) => (
-                    <tr 
-                      key={voluntarioIndex} 
-                      className="hover:bg-blue-50 transition-all duration-200 animate-in fade-in-0 slide-in-from-left-2"
-                      style={{ animationDelay: `${voluntarioIndex * 100}ms` }}
-                    >
-                      <td className="sticky left-0 bg-white border border-gray-200 p-3 z-10">
+              <div className="min-w-max">
+                <table className="w-full border-collapse">
+                  {/* Encabezado con fechas */}
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 bg-gray-50 border border-gray-200 p-3 text-left font-semibold text-gray-700 w-48 z-20">
+                        Voluntario
+                      </th>
+                      {rangoFechas.map((fecha, index) => (
                         <Tooltip
-                          content={
-                            <div>
-                              <div className="font-semibold">{voluntario.nombre} {voluntario.apellido}</div>
-                              <div className="text-xs opacity-90">Centro: {voluntario.centro}</div>
-                              <div className="text-xs opacity-90">
-                                Llegada: {new Date(voluntario.llegada).toLocaleDateString('es-ES')}
-                              </div>
-                              <div className="text-xs opacity-90">
-                                Salida: {new Date(voluntario.salida).toLocaleDateString('es-ES')}
-                              </div>
-                              <div className="text-xs opacity-90">
-                                Duración: {calcularDuracion(voluntario)} días
-                              </div>
-                            </div>
-                          }
-                          position="right"
+                          key={index}
+                          content={formatearFechaCompleta(fecha)}
+                          position="bottom"
                         >
-                          <div className="cursor-help">
-                            <div className="font-medium text-gray-900">
-                              {voluntario.nombre} {voluntario.apellido}
+                          <th className="border border-gray-200 p-2 text-center font-semibold text-gray-700 w-16 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
+                            <div className="text-xs whitespace-nowrap">
+                              {formatearFecha(fecha)}
                             </div>
-                            <div className="text-sm text-gray-500 flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {voluntario.centro}
-                            </div>
-                          </div>
+                          </th>
                         </Tooltip>
+                      ))}
+                    </tr>
+                  </thead>
+                  
+                  {/* Filas de voluntarios */}
+                  <tbody>
+                    {voluntariosFiltrados.map((voluntario, voluntarioIndex) => (
+                      <tr 
+                        key={voluntarioIndex} 
+                        className="hover:bg-blue-50 transition-all duration-200 animate-in fade-in-0 slide-in-from-left-2"
+                        style={{ animationDelay: `${voluntarioIndex * 100}ms` }}
+                      >
+                        <td className="sticky left-0 bg-white border border-gray-200 p-3 z-10">
+                          <Tooltip
+                            content={
+                              <div>
+                                <div className="font-semibold">{voluntario.nombre} {voluntario.apellido}</div>
+                                <div className="text-xs opacity-90">Centro: {voluntario.centro}</div>
+                                <div className="text-xs opacity-90">
+                                  Llegada: {new Date(voluntario.llegada).toLocaleDateString('es-ES')}
+                                </div>
+                                <div className="text-xs opacity-90">
+                                  Salida: {new Date(voluntario.salida).toLocaleDateString('es-ES')}
+                                </div>
+                                <div className="text-xs opacity-90">
+                                  Duración: {calcularDuracion(voluntario)} días
+                                </div>
+                              </div>
+                            }
+                            position="right"
+                          >
+                            <div className="cursor-help">
+                              <div className="font-medium text-gray-900 text-sm">
+                                {voluntario.nombre} {voluntario.apellido}
+                              </div>
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {voluntario.centro}
+                              </div>
+                            </div>
+                          </Tooltip>
+                        </td>
+                        {rangoFechas.map((fecha, fechaIndex) => {
+                          const disponible = estaDisponible(voluntario, fecha)
+                          const cellKey = `${voluntarioIndex}-${fechaIndex}`
+                          return (
+                            <td 
+                              key={fechaIndex} 
+                              className={`border border-gray-200 p-2 text-center transition-all duration-300 w-16 ${
+                                disponible 
+                                  ? 'bg-green-100 hover:bg-green-200 cursor-pointer hover:scale-105' 
+                                  : 'bg-gray-50 hover:bg-gray-100'
+                              }`}
+                              onMouseEnter={() => setHoveredCell(cellKey)}
+                              onMouseLeave={() => setHoveredCell(null)}
+                            >
+                              {disponible && (
+                                <Tooltip
+                                  content={`${voluntario.nombre} ${voluntario.apellido} disponible el ${formatearFechaCompleta(fecha)}`}
+                                  position="top"
+                                >
+                                  <div className={`w-4 h-4 bg-green-500 rounded-full mx-auto transition-all duration-200 ${
+                                    hoveredCell === cellKey ? 'scale-125 shadow-lg' : ''
+                                  }`}></div>
+                                </Tooltip>
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                    
+                    {/* Fila de totales */}
+                    <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-200">
+                      <td className="sticky left-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 p-3 font-bold text-blue-900 z-10">
+                        Total por día
                       </td>
                       {rangoFechas.map((fecha, fechaIndex) => {
-                        const disponible = estaDisponible(voluntario, fecha)
-                        const cellKey = `${voluntarioIndex}-${fechaIndex}`
+                        const total = calcularTotalPorDia(fecha)
                         return (
-                          <td 
-                            key={fechaIndex} 
-                            className={`border border-gray-200 p-2 text-center transition-all duration-300 ${
-                              disponible 
-                                ? 'bg-green-100 hover:bg-green-200 cursor-pointer hover:scale-105' 
-                                : 'bg-gray-50 hover:bg-gray-100'
-                            }`}
-                            onMouseEnter={() => setHoveredCell(cellKey)}
-                            onMouseLeave={() => setHoveredCell(null)}
+                          <Tooltip
+                            key={fechaIndex}
+                            content={`${total} voluntarios disponibles el ${formatearFechaCompleta(fecha)}`}
+                            position="top"
                           >
-                            {disponible && (
-                              <Tooltip
-                                content={`${voluntario.nombre} ${voluntario.apellido} disponible el ${formatearFechaCompleta(fecha)}`}
-                                position="top"
-                              >
-                                <div className={`w-4 h-4 bg-green-500 rounded-full mx-auto transition-all duration-200 ${
-                                  hoveredCell === cellKey ? 'scale-125 shadow-lg' : ''
-                                }`}></div>
-                              </Tooltip>
-                            )}
-                          </td>
+                            <td className="border border-gray-200 p-2 text-center font-bold text-blue-900 hover:bg-blue-100 transition-colors cursor-help w-16">
+                              <div className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-all duration-200 text-xs ${
+                                total > 0 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                              }`}>
+                                {total}
+                              </div>
+                            </td>
+                          </Tooltip>
                         )
                       })}
                     </tr>
-                  ))}
-                  
-                  {/* Fila de totales */}
-                  <tr className="bg-gradient-to-r from-blue-50 to-indigo-50 border-t-2 border-blue-200">
-                    <td className="sticky left-0 bg-gradient-to-r from-blue-50 to-indigo-50 border border-gray-200 p-3 font-bold text-blue-900 z-10">
-                      Total por día
-                    </td>
-                    {rangoFechas.map((fecha, fechaIndex) => {
-                      const total = calcularTotalPorDia(fecha)
-                      return (
-                        <Tooltip
-                          key={fechaIndex}
-                          content={`${total} voluntarios disponibles el ${formatearFechaCompleta(fecha)}`}
-                          position="top"
-                        >
-                          <td className="border border-gray-200 p-2 text-center font-bold text-blue-900 hover:bg-blue-100 transition-colors cursor-help">
-                            <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
-                              total > 0 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
-                            }`}>
-                              {total}
-                            </div>
-                          </td>
-                        </Tooltip>
-                      )
-                    })}
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </CardContent>
         </Card>
