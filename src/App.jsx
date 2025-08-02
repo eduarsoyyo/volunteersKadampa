@@ -389,20 +389,23 @@ function App() {
               <div className="min-w-max">
                 <table className="w-full border-collapse">
                   {/* Encabezado con fechas */}
-                    <thead>
-                      <tr>
-                        <th className="sticky left-0 bg-gray-50 border border-gray-200 p-2 text-left font-semibold text-gray-700 w-48 z-20">
-                          Voluntario
-                        </th>
-                        {rangoFechas.map((fecha, index) => (
-                          <Tooltip key={index} content={formatearFechaCompleta(fecha)} position="bottom">
-                            <th className="border border-gray-200 px-2 py-1 text-center font-semibold text-gray-700 w-12 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
-                              <span className="text-xs inline-block whitespace-nowrap min-w-[40px]">{formatearFecha(fecha)}</span>
-                            </th>
-                          </Tooltip>
-                        ))}
-                      </tr>
-                    </thead>                  
+                  <thead>
+                    <tr>
+                      <th className="sticky left-0 bg-gray-50 border border-gray-200 p-3 text-left font-semibold text-gray-700 w-48 z-20">
+                        Voluntario
+                      </th>
+                      {rangoFechas.map((fecha, index) => (
+                        <Tooltip key={index} content={formatearFechaCompleta(fecha)} position="bottom">
+                          <th
+                            className="border border-gray-200 p-2 text-center font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help whitespace-nowrap min-w-[50px]"
+                          >
+                            {/* ✅ Forzamos inline en el texto de fecha */}
+                            <div className="inline-block text-xs">{formatearFecha(fecha)}</div>
+                          </th>
+                        </Tooltip>
+                      ))}
+                    </tr>
+                  </thead>                 
                   {/* Filas de voluntarios */}
                   <tbody>
                     {voluntariosFiltrados.map((voluntario, voluntarioIndex) => (
