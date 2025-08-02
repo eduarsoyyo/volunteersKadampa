@@ -397,7 +397,7 @@ function App() {
                         {rangoFechas.map((fecha, index) => (
                           <Tooltip key={index} content={formatearFechaCompleta(fecha)} position="bottom">
                             <th className="border border-gray-200 px-2 py-1 text-center font-semibold text-gray-700 w-12 bg-gray-50 hover:bg-gray-100 transition-colors cursor-help">
-                              <span className="text-xs inline-block">{formatearFecha(fecha)}</span>
+                              <span className="text-xs inline-block whitespace-nowrap min-w-[40px]">{formatearFecha(fecha)}</span>
                             </th>
                           </Tooltip>
                         ))}
@@ -481,7 +481,7 @@ function App() {
                           return (
                             <Tooltip key={fechaIndex} content={`${total} voluntarios disponibles el ${formatearFechaCompleta(fecha)}`} position="top">
                               <td className="border border-gray-200 p-1 text-center hover:bg-blue-100 transition-colors cursor-help w-12">
-                                <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all duration-200 ${
+                                 <div className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold transition-all duration-200 whitespace-nowrap min-w-[40px] ${
                                   total > 0 ? 'bg-blue-600 text-white hover:scale-110 shadow-md' : 'bg-gray-200 text-gray-500'
                                 }`}>
                                   {total}
