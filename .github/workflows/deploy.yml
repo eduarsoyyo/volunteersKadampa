@@ -20,14 +20,16 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        working-directory: ./volunteersKadampa
 
       - name: Build
         run: npm run build
+        working-directory: ./volunteersKadampa
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./volunteersKadampa/dist
           publish_branch: gh-pages
           cname: volunteerskadampa.com # Optional: if you have a custom domain
